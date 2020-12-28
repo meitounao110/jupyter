@@ -58,8 +58,8 @@ def parameters():
         'min_lr': 1e-4,
 
         # Pseudo-Label
-        't1': 100,
-        't2': 600,
+        't1': 10,
+        't2': 60,
         'af': 0.3,
         'n_labels': 4000,
         'data_seed': 10,

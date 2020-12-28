@@ -160,7 +160,7 @@ def main(config):
             device1 = 'cuda:{}'.format(config.gpu) if torch.cuda.is_available() else 'cpu'
             net = net.to(device1)
         optimizer = create_optim(net.parameters(), config)
-        trainer = Trainer.PseudoLabel(net, optimizer, criterion, device1, config, writer)
+        trainer = Trainer.PseudoLabel(net, optimizer, criterion, device1, config, writer,save_dir='./model')
         scheduler = create_lr_scheduler(optimizer, config)
         trainer.loop(config.epochs, train_loader, eval_loader,
                      scheduler=scheduler, print_freq=config.print_freq)

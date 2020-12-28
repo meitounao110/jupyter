@@ -3,38 +3,58 @@ import matplotlib.pyplot as plt
 import torch
 import scipy.io as sio
 import torch.nn.functional as F
+from pathlib import Path
+from torch.nn.functional import interpolate
+from architectures.fpn import Fpn_n
 
-# data = sio.loadmat(
-#     "/mnt/share1/layout_data/v0.3/data/all_walls/train/train/Example0.mat"
-# )
-# u_true = data["u"]  # 真实温度
-# F = data["F"]  # 布局
-# a=torch.Tensor([[1,2,3,4],[1,2,3,4],[1,2,3,4],[2,2,3,4]])
-# print(a[-1])
-# print(torch.ones_like(a) * 0)
-# c=torch.randn(4,4)
-# print(c)
-# b=torch.Tensor([[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]])
-# weight=torch.Tensor([[0,1,0],[1,-4,1],[0,1,0]])
-# weight=weight.unsqueeze(0).unsqueeze(0)
-# print(weight[...,1:])
-# conv=F.conv2d(c.unsqueeze(0).unsqueeze(0),weight,stride=1)
-# a=u_true.tolist()
-# print(min(a))
-# a=torch.rand(4,3,4,4)
-# print(a)
-# print(a[:2],a[:2].size())
-# print(a[:2,:1,:,:])
-# print(a[:2,1:,:,:])
+data = sio.loadmat(
+    "/mnt/share1/layout_data/v0.3/data/all_walls/test/0/test/Example10000.mat"
+)
+u_true = data["u"]  # 真实温度
+F = data["F"]  # 布局
 
-a=np.array([[1,2],[3,4]])
-b=np.array([[3,3],[4,4]])
+fig1 = plt.figure(figsize=(10, 5))
+plt.subplot(121)
+im = plt.imshow(F)
+plt.colorbar(im)
 
-loss_fn = torch.nn.MSELoss(reduce=True, size_average=True)
+plt.subplot(122)
+im = plt.imshow(u_true)
+plt.colorbar(im)
+print(u_true.max())
+print(u_true.min())
+plt.show()
 
-input = torch.autograd.Variable(torch.from_numpy(a))
-target = torch.autograd.Variable(torch.from_numpy(b))
+PATH = '/mnt/share1/zhangyunyang/pseudo_label-pytorch-master/experiments/model/model_epoch_19.pth'
+model = Fpn_n()
+checkpoint = torch.load(PATH)
+model.load_state_dict(checkpoint['weight'])
+model.eval()
 
-loss = loss_fn(input.float(), target.float())
+F_tensor = (torch.from_numpy(F).float().unsqueeze(0).unsqueeze(0)) / 20000
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+F_tensor = F_tensor.to(device)
+model = model.to(device)
+with torch.no_grad():
+    u_pred = model(F_tensor)
+u_pred = interpolate(u_pred, size=(200, 200),
+                     mode='bilinear',
+                     align_corners=True) * 50 + 298
+u_pred_n = u_pred.cpu().squeeze().numpy()
 
-print(loss)
+fig2 = plt.figure(figsize=(10, 5))
+plt.subplot(121)
+im = plt.imshow(F)
+plt.colorbar(im)
+
+plt.subplot(122)
+im = plt.imshow(u_pred_n)
+plt.colorbar(im)
+# fig.savefig('./predict.png', dpi=100)
+plt.show()
+# %%
+print(u_pred_n.max())
+print(u_pred_n.min())
+a = torch.abs(torch.Tensor(u_pred_n - u_true))
+mae = torch.mean(a)
+print('mae', mae)

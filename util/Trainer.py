@@ -24,6 +24,13 @@ class PseudoLabel:
         self.af = config.af
         self.upsize = config.upsize
 
+    def outputs(self, data):
+        outputs_feature = self.model(data.float())
+        outputs = F.interpolate(outputs_feature, size=(int(self.upsize), int(self.upsize)), mode='bilinear',
+                                align_corners=True)
+        outputs = outputs * 50 + 298
+        return outputs
+
     def _iteration(self, data_loader, print_freq, is_train=True):
         loop_loss = []
         accuracy = []
@@ -37,31 +44,14 @@ class PseudoLabel:
                     self.device), targets_label.to(self.device), targets_unlabel.to(self.device)
                 # data, targets = data.to(self.device), targets.to(self.device)  # 放到GPU上
                 # 将输出插值上采样
-                outputs_feature_l = self.model(data_label.float())
-                outputs_l = F.interpolate(outputs_feature_l, size=(int(self.upsize), int(self.upsize)), mode='bilinear',
-                                          align_corners=True)
-                outputs_l = outputs_l * 50 + 298
-                outputs_feature_ul = self.model(data_unlabel.float())
-                outputs_ul = F.interpolate(outputs_feature_ul, size=(int(self.upsize), int(self.upsize)),
-                                           mode='bilinear', align_corners=True)
-                outputs_ul = outputs_ul * 50 + 298
-            else:
-                data, targets = data.to(self.device), targets.to(self.device)  # 放到GPU上
-                outputs_feature = self.model(data.float())
-                outputs = F.interpolate(outputs_feature, size=(int(self.upsize), int(self.upsize)), mode='bilinear',
-                                        align_corners=True)
-                outputs = outputs * 50 + 298
+                outputs_l = self.outputs(data_label)
+                outputs_ul = self.outputs(data_unlabel)
 
-            if is_train:  # 训练时
                 labeled_bs = self.labeled_bs
                 labeled_loss = self.loss_fn(outputs_l, targets_label.float())
                 # labeled_loss = torch.sum(self.loss_fn(outputs_l, targets_label.float())) / labeled_bs
                 with torch.no_grad():
-                    outputs_feature_ulp = self.model(data_unlabel.float())
-                    outputs_ulp = F.interpolate(outputs_feature_ulp, size=(int(self.upsize), int(self.upsize)),
-                                                mode='bilinear',
-                                                align_corners=True)
-                    outputs_ulp = outputs_ulp * 50 + 298
+                    outputs_ulp = self.outputs(data_unlabel)
                     pseudo_labeled = outputs_ulp
                 # unlabeled_loss = self.loss_fn(outputs_ul, pseudo_labeled)
                 unlabeled_loss = self.loss_fn(outputs_ul, pseudo_labeled.float())
@@ -70,6 +60,8 @@ class PseudoLabel:
                 loss.backward()
                 self.optimizer.step()
             else:
+                data, targets = data.to(self.device), targets.to(self.device)  # 放到GPU上
+                outputs = self.outputs(data)
                 labeled_bs = data.size(0)
                 labeled_loss = unlabeled_loss = torch.Tensor([0])
                 loss = self.loss_fn(outputs, targets.float())
@@ -127,17 +119,21 @@ class PseudoLabel:
         self.model.eval()  # 不启用dropout和batchnormalization
         with torch.no_grad():
             loss, correct = self._iteration(data_loader, print_freq, is_train=False)
+        return loss
 
     def loop(self, epochs, train_data, test_data, scheduler=None, print_freq=-1):  # 开始循环训练，epochs 训练数据、测试数据
+        minloss = 10000000
         for ep in range(epochs):
             self.epoch = ep  # ep表示当次迭代数
             print("------ Training epochs: {} ------".format(ep))
             self.train(train_data, print_freq)  # print_freq为输出的频率？
             print("------ Testing epochs: {} ------".format(ep))
-            self.test(test_data, print_freq)
+            loss = sum(self.test(test_data, print_freq))
             if scheduler is not None:
                 scheduler.step()
-            if ep % self.save_freq == 0:
+            # if ep % self.save_freq == 0:
+            if loss < minloss:
+                minloss = loss
                 self.save(ep)
 
     def save(self, epoch, **kwargs):
@@ -147,4 +143,6 @@ class PseudoLabel:
                      "weight": self.model.state_dict()}
             if not model_out_path.exists():
                 model_out_path.mkdir()
-            torch.save(state, model_out_path / "model_epoch_{}.pth".format(epoch))
+            from datetime import datetime
+            current_time = datetime.now().strftime('%b%d_%H-%M-%S')
+            torch.save(state, model_out_path / f"{current_time}_model.pth")
