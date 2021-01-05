@@ -151,6 +151,10 @@ class PseudoLabel:
                 minloss = loss
                 self.save(ep)
 
+    def testonce(self, test_data, print_freq=5):
+        print("------ Testing epochs: {} ------".format(1))
+        loss = self.test(test_data, print_freq)
+
     def save(self, epoch, **kwargs):
         if self.save_dir is not None:
             model_out_path = Path(self.save_dir)

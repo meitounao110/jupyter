@@ -17,6 +17,8 @@ def create_parser():
                         help='checkpoint frequency in epochs, 0 to turn checkpointing off (default: 1)')
     parser.add_argument('-g', '--gpu', default=0, type=int, metavar='N',
                         help='gpu number (default: 0)')
+    parser.add_argument('--train', default=False, type=str2bool,
+                        help='is train', metavar='BOOL')
 
     # Data
     parser.add_argument('--dataset', metavar='DATASET', default='imagenet',
@@ -35,6 +37,7 @@ def create_parser():
     parser.add_argument('--list-path1', type=str, metavar='DIR')
     parser.add_argument('--list-path2', type=str, metavar='DIR')
     parser.add_argument('--test-list-path', type=str, metavar='DIR')
+    parser.add_argument('--PATH', type=str, metavar='modelPATH')
 
     # Architecture
     parser.add_argument('--arch', '-a', metavar='ARCH', default='lenet')
@@ -94,7 +97,7 @@ def parse_dict_args(**kwargs):
     kwargs_pairs = (to_cmdline_kwarg(key, value)
                     for key, value in kwargs.items())
     cmdline_args = list(sum(kwargs_pairs, ()))  # ??
-    #print('kwargs_pairs', kwargs_pairs)
+    # print('kwargs_pairs', kwargs_pairs)
     print("Using these args: ", " ".join(cmdline_args))
     args = create_parser().parse_args(cmdline_args)
     return args

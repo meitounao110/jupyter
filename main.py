@@ -31,7 +31,7 @@ def data_loaders(
                                   target_transform=heat_transform,
                                   max_iters=None)
     eval_loader = torch.utils.data.DataLoader(evalset,
-                                              batch_size=batch_size * 4,
+                                              batch_size=batch_size ,
                                               shuffle=False,
                                               num_workers=2 * config.workers,
                                               pin_memory=True,
@@ -78,7 +78,8 @@ def create_loss_fn(config):
     if config.loss == 'mse':
         # for pytorch 0.4.0
         # criterion = nn.CrossEntropyLoss(ignore_index=NO_LABEL, reduction=None)
-        criterion = nn.MSELoss()
+        #criterion = nn.MSELoss()
+        criterion = nn.L1Loss()
         # for pytorch 0.4.1
         # criterion = nn.CrossEntropyLoss(ignore_index=NO_LABEL, reduction='none')
     return criterion
@@ -134,7 +135,13 @@ def main(config):
             device1 = 'cuda:{}'.format(config.gpu) if torch.cuda.is_available() else 'cpu'
             net = net.to(device1)
         optimizer = create_optim(net.parameters(), config)
-        trainer = Trainer.PseudoLabel(net, optimizer, criterion, device1, config, writer, save_dir='./model')
-        scheduler = create_lr_scheduler(optimizer, config)
-        trainer.loop(config.epochs, train_loader, eval_loader,
-                     scheduler=scheduler, print_freq=config.print_freq)
+        if config.train:
+            trainer = Trainer.PseudoLabel(net, optimizer, criterion, device1, config, writer, save_dir='./model')
+            scheduler = create_lr_scheduler(optimizer, config)
+            trainer.loop(config.epochs, train_loader, eval_loader,
+                         scheduler=scheduler, print_freq=config.print_freq)
+        else:
+            checkpoint = torch.load(config.PATH)
+            net.load_state_dict(checkpoint['weight'])
+            trainer = Trainer.PseudoLabel(net, optimizer, criterion, device1, config, writer, save_dir='./model')
+            trainer.testonce(eval_loader, print_freq=config.print_freq)

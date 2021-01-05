@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="root@192.168.2.2:34839">
+  <component name="PublishConfigData" autoUpload="Always" serverName="root@192.168.8.110:23333">
     <serverData>
       <paths name="root@192.168.2.2:34839">
         <serverdata>
           <mappings>
             <mapping deploy="/mnt/share1/zhangyunyang/pseudo_label-pytorch-master" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@192.168.8.110:23333">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/mnt/zhangyunyang1/pseudo_label-pytorch-master" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
