@@ -3,17 +3,12 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 from torch.optim import lr_scheduler
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
-import torchvision
-import torchvision.transforms as transforms
 from tensorboardX import SummaryWriter
 from util import datasets, Trainer
-from architectures.fpn import Fpn_n
-import itertools
-
-from util.datasets import NO_LABEL
+from architectures.FPN1 import FPN_ResNet18
+from util.loss import Jacobi_layer, LaplaceLoss, OHEMF12d
 
 
 def data_loaders(
@@ -24,6 +19,9 @@ def data_loaders(
         batch_size,
         batch_size_ul,
         config):
+    '''
+    该部分用于给出train_loader和eval_loader，list_path1和list_path2分别为无标签列表和有标签列表
+    当list_path1为空时，仅进行有监督训练；当list_path2为空时仅进行无监督训练'''
     evaldir = os.path.join(datadir, config.eval_subdir)
     evalset = datasets.dataloader(root=evaldir,
                                   list_path=config.test_list_path,
@@ -31,9 +29,9 @@ def data_loaders(
                                   target_transform=heat_transform,
                                   max_iters=None)
     eval_loader = torch.utils.data.DataLoader(evalset,
-                                              batch_size=batch_size ,
+                                              batch_size=batch_size,
                                               shuffle=False,
-                                              num_workers=2 * config.workers,
+                                              num_workers=config.workers,
                                               pin_memory=True,
                                               drop_last=False)  # 测试用的
     traindir = os.path.join(datadir, config.train_subdir)
@@ -75,17 +73,20 @@ def data_loaders(
 
 
 def create_loss_fn(config):
+    '''该部分构建损失函数'''
     if config.loss == 'mse':
         # for pytorch 0.4.0
         # criterion = nn.CrossEntropyLoss(ignore_index=NO_LABEL, reduction=None)
-        #criterion = nn.MSELoss()
-        criterion = nn.L1Loss()
+        criterion_l = nn.MSELoss()
+        # criterion_l = nn.L1Loss()
+        # criterion_ul = LaplaceLoss()
         # for pytorch 0.4.1
         # criterion = nn.CrossEntropyLoss(ignore_index=NO_LABEL, reduction='none')
-    return criterion
+    return criterion_l  # , criterion_ul
 
 
 def create_optim(params, config):
+    '''该部分构建优化器'''
     if config.optim == 'sgd':
         optimizer = optim.SGD(params, config.lr,
                               momentum=config.momentum,
@@ -97,6 +98,7 @@ def create_optim(params, config):
 
 
 def create_lr_scheduler(optimizer, config):
+    '''该部分构建scheduler'''
     if config.lr_scheduler == 'cos':
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer,
                                                    T_max=config.epochs,
@@ -108,7 +110,7 @@ def create_lr_scheduler(optimizer, config):
                                              milestones=config.steps,
                                              gamma=config.gamma)
     elif config.lr_scheduler == 'none':
-        scheduler = None
+        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
     return scheduler
 
 
@@ -121,14 +123,18 @@ def main(config):
         # num_classes为类别数
         # num_classes = dataset_config.pop('num_classes')
         train_loader, eval_loader = data_loaders(**dataset_config, config=config)
-
+        # torch.set_default_dtype(torch.float64)
         dummy_input = torch.randn(1, 1, 200, 200)  # 添加一个模型的图
-        # fpnmodel = arch_n[config.arch]
-        net = Fpn_n()
+        #net = dw(FPN_ResNet18())
+        net = FPN_ResNet18()
+        # net = Fpn_n()
         writer.add_graph(net, dummy_input)
-
+        ###
+        # checkpoint = torch.load(config.PATH)
+        # net.load_state_dict(checkpoint['weight'])
+        ###
         device1 = 'cuda' if torch.cuda.is_available() else 'cpu'
-        criterion = create_loss_fn(config)
+        criterion_l = create_loss_fn(config)
         if config.is_parallel:
             net = torch.nn.DataParallel(net).to(device1)
         else:
@@ -136,12 +142,34 @@ def main(config):
             net = net.to(device1)
         optimizer = create_optim(net.parameters(), config)
         if config.train:
-            trainer = Trainer.PseudoLabel(net, optimizer, criterion, device1, config, writer, save_dir='./model')
+            trainer = Trainer.PseudoLabel(net, optimizer, criterion_l, device1, config, writer,
+                                          save_dir='./model')
             scheduler = create_lr_scheduler(optimizer, config)
             trainer.loop(config.epochs, train_loader, eval_loader,
                          scheduler=scheduler, print_freq=config.print_freq)
         else:
             checkpoint = torch.load(config.PATH)
             net.load_state_dict(checkpoint['weight'])
-            trainer = Trainer.PseudoLabel(net, optimizer, criterion, device1, config, writer, save_dir='./model')
+            trainer = Trainer.PseudoLabel(net, optimizer, criterion_l, device1, config, writer,
+                                          save_dir='./model')
             trainer.testonce(eval_loader, print_freq=config.print_freq)
+
+
+# class dw(torch.nn.Module):
+#     '''
+#     '''
+#
+#     def __init__(self, model):
+#         '''
+#         '''
+#
+#         # initialize the module using super() constructor
+#         super(dw, self).__init__()
+#         # assign the architectures
+#         self.model = model
+#         # assign the weights for each task
+#         self.weights = torch.nn.Parameter(torch.ones(2).float())
+#
+#     def forward(self, x):
+#         out = self.model(x)
+#         return out

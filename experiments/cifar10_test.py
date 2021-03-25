@@ -10,27 +10,29 @@ def parameters():
     # 定义默认参数
     defaults = {
         # Technical details
-        'train': False,
+        'train': True,
         'is_parallel': False,
-        'workers': 2,
-        'gpu': 0,
+        'workers': 8,
+        'gpu': 1,
         'checkpoint_epochs': 20,
 
         # Data
         'dataset': 'FPN',
-        'base_batch_size': 1,
-        'print_freq': 5,
-        'train_subdir': 'one_point/train/train',
-        'eval_subdir': 'one_point/test/0/test',
+        'base_batch_size': 8,
+        'print_freq': 20,
+        'train_subdir': "train",
+        # 'one_point/train/train',
+        'eval_subdir': 'train',
+        # 'one_point/test/0/test',
         'mean_layout': 0,
-        'std_layout': 20000,
-        'list_path1':  # None,
-            '/mnt/layout_data/v0.3/data/one_point/train/train.txt',  # 放无标签数据列表
-        'list_path2':  # None,
-        # '/mnt/layout_data/v0.3/data/one_point/train/train.txt',
-            '/mnt/layout_data/v0.3/data/one_point/train/val.txt',  # 有标签
-        'test_list_path': '/mnt/layout_data/v0.3/data/one_point/test/test_0.txt',  # 存放测试样本
-        'PATH': '/mnt/zhangyunyang1/pseudo_label-pytorch-master/experiments/model/onepoints_400_1600_FPN_model.pth',
+        'std_layout': 10000,
+        'list_path1':  # None,                           # 放无标签数据列表
+            '/mnt/zhangyunyang1/pseudo_label-pytorch-master/501-8000label.txt',
+        'list_path2':  # None,                              # 有标签
+            '/mnt/zhangyunyang1/pseudo_label-pytorch-master/500label.txt',
+        'test_list_path':  # '/mnt/zhangyunyang1/pseudo_label-pytorch-master/1600label.txt',
+            '/mnt/zhaoxiaoyu/data/layout_data/simple_component/dataset/200x200_val.txt',  # 存放测试样本
+        'PATH': '/mnt/zhangyunyang1/pseudo_label-pytorch-master/experiments/model/uns_onepoint200_7900ul.pth',
         # modlePATH
 
         # Architecture
@@ -50,14 +52,14 @@ def parameters():
         'loss': 'mse',
         'optim': 'adam',
         'epochs': 200,
-        'base_lr': 0.001,
+        'base_lr': 0.01,
         'momentum': 0.9,
         'weight_decay': 5e-4,
         'nesterov': True,
 
         # LR_schedular
-        # 'lr_scheduler': 'none',
-        'lr_scheduler': 'cos',
+        'lr_scheduler': 'none',
+        # 'lr_scheduler': 'cos',
         # 'lr_scheduler': 'multistep',
         'steps': '100,150,200,250,300,350,400,450,480',
         'gamma': 0.5,
@@ -66,7 +68,7 @@ def parameters():
         # Pseudo-Label
         't1': 10,
         't2': 60,
-        'af': 0.3,
+        'af': 1,
         'upsize': 200,
     }
 

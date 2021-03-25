@@ -1,11 +1,7 @@
 import os
-import itertools
 import numpy as np
-from PIL import Image
 import torchvision.transforms as transforms
-from torch.utils.data.sampler import Sampler
 import torch
-import matplotlib.pyplot as plt
 from torchvision.datasets import VisionDataset
 import scipy.io as sio
 
@@ -40,6 +36,7 @@ def FPN(config):
             for index, line in enumerate(rf):
                 count2 += 1
         batch_size_ul = int(count1 / count2 * config.batch_size)
+        #batch_size_ul = config.batch_size
     else:
         batch_size_ul = config.batch_size
 
@@ -47,7 +44,8 @@ def FPN(config):
         'train_transform': transform_layout,
         'eval_transform': transform_layout,
         'heat_transform': heat_transform,
-        'datadir': '/mnt/layout_data/v0.3/data',
+        'datadir': "/mnt/zhaoxiaoyu/data/layout_data/simple_component/one_point_dataset_200x200",
+        # '/mnt/layout_data/v0.3/data',
         'batch_size': config.batch_size,
         'batch_size_ul': batch_size_ul
     }
@@ -146,7 +144,7 @@ class dataloader(VisionDataset):
     def __init__(self,
                  root,
                  list_path,
-                 load_name='f',
+                 load_name='list',
                  resp_name='u',
                  extensions='mat',
                  transform=None,
@@ -169,7 +167,6 @@ class dataloader(VisionDataset):
         path = self.sample_files[index]
         load, resp = self.loader(path, self.load_name, self.resp_name)
         if self.transform is not None:
-            load = load.astype(float)
             load = self.transform(load)
         if self.target_transform is not None:
             resp = self.target_transform(resp)
@@ -208,8 +205,15 @@ def has_allowed_extension(filename, extensions):
     return filename.lower().endswith(extensions)  # 以extensions为后缀的文件小写
 
 
-def mat_loader(path, load_name, resp_name=None):
+def mat_loader(path, load_name, resp_name=None, nx=200):
     mats = sio.loadmat(path)
-    load = mats.get(load_name)
+    load = mats.get(load_name)[0]
+    layout_map = np.zeros((nx, nx))
+    mul = int(nx / 10)
+    for i in load:
+        i = i - 1
+        layout_map[(i % 10 * mul):((i % 10) * mul + mul), (i // 10 * mul):((i // 10 * mul) + mul)] = 10000 * np.ones(
+            (mul, mul))
+    load = layout_map
     resp = mats.get(resp_name) if resp_name is not None else None
     return load, resp  # load存放F即布局，resp存放u即温度场标签
