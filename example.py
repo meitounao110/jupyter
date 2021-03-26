@@ -28,7 +28,7 @@ from util.loss import Jacobi_layer, LaplaceLoss
 # plt.show()
 
 data = sio.loadmat(
-    "/mnt/zhaoxiaoyu/data/layout_data/simple_component/one_point_dataset_200x200/train/Example1.mat"
+    "/mnt/zhaoxiaoyu/data/layout_data/simple_component/one_point_dataset_200x200/train/Example2.mat"
 )
 u_true = data["u"]  # 真实温度
 #F = data["list"]
@@ -66,7 +66,7 @@ plt.show()
 # u_true_tensor = torch.from_numpy(u_true).type(torch.float64).unsqueeze(0).unsqueeze(0)
 # print(u_true_tensor)
 
-PATH = '/mnt/zhangyunyang1/pseudo_label-pytorch-master/experiments/model/semi_dw1_onepoint200_500l_7500ul_netc.pth'
+PATH = '/mnt/zhangyunyang1/pseudo_label-pytorch-master/experiments/model/semi_dwsamenum_onepoint200_500l_4000ul.pth'
 model = FPN_ResNet18()
 checkpoint = torch.load(PATH)
 model.load_state_dict(checkpoint['weight'])

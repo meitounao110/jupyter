@@ -27,16 +27,16 @@ def FPN(config):
         ]
     )
     if config.list_path1 != 'None' and config.list_path2 != 'None':
-        with open(config.list_path1) as rf:
-            count1 = 0  # 无标签数
-            for index, line in enumerate(rf):
-                count1 += 1
-        with open(config.list_path2) as rf:
-            count2 = 0  # 有标签数
-            for index, line in enumerate(rf):
-                count2 += 1
-        batch_size_ul = int(count1 / count2 * config.batch_size)
-        #batch_size_ul = config.batch_size
+        # with open(config.list_path1) as rf:
+        #     count1 = 0  # 无标签数
+        #     for index, line in enumerate(rf):
+        #         count1 += 1
+        # with open(config.list_path2) as rf:
+        #     count2 = 0  # 有标签数
+        #     for index, line in enumerate(rf):
+        #         count2 += 1
+        # batch_size_ul = int(count1 / count2 * config.batch_size)
+        batch_size_ul = 128
     else:
         batch_size_ul = config.batch_size
 

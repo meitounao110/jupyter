@@ -13,7 +13,7 @@ def parameters():
         'train': True,
         'is_parallel': False,
         'workers': 8,
-        'gpu': 1,
+        'gpu': 2,
         'checkpoint_epochs': 20,
 
         # Data
@@ -27,9 +27,9 @@ def parameters():
         'mean_layout': 0,
         'std_layout': 10000,
         'list_path1':  # None,                           # 放无标签数据列表
-            '/mnt/zhangyunyang1/pseudo_label-pytorch-master/501-8000label.txt',
-        'list_path2':  # None,                              # 有标签
-            '/mnt/zhangyunyang1/pseudo_label-pytorch-master/500label.txt',
+            '/mnt/zhangyunyang1/pseudo_label-pytorch-master/4001-8000label.txt',
+        'list_path2':   None,                              # 有标签
+            #'/mnt/zhangyunyang1/pseudo_label-pytorch-master/500label.txt',
         'test_list_path':  # '/mnt/zhangyunyang1/pseudo_label-pytorch-master/1600label.txt',
             '/mnt/zhaoxiaoyu/data/layout_data/simple_component/dataset/200x200_val.txt',  # 存放测试样本
         'PATH': '/mnt/zhangyunyang1/pseudo_label-pytorch-master/experiments/model/uns_onepoint200_7900ul.pth',

@@ -68,38 +68,41 @@ class PseudoLabel:
                         x = self.loss_ul(data_unlabel * 10000, outputs_ul.detach())
                     ohem_loss1 = OHEMF12d()
                     unlabeled_loss = ohem_loss1(outputs_ul, x)
+                    alpha = self.unlabeled_weight(labeled_loss, unlabeled_loss)
                     ####
-                    loss_data = {}
-                    grads = {}
-                    scale = {}
-                    tasks = ["1", "2"]
-                    loss_t = {"1": labeled_loss, "2": unlabeled_loss}
-                    # loss_t["1"] = labeled_loss
-                    # loss_t["2"] = unlabeled_loss
-                    # Compute gradients of each loss function wrt z
-                    for t in tasks:
-                        self.optimizer.zero_grad()
-                        loss_data[t] = loss_t[t].data
-                        loss_t[t].backward(retain_graph=True)
-                        grads[t] = []
-                        for param in self.model.parameters():
-                            if param.grad is not None:
-                                grads[t].append(Variable(param.grad.data.clone(), requires_grad=False))
-                    gn = gradient_normalizers(grads, loss_data, "loss+")
-                    for t in tasks:
-                        for gr_i in range(len(grads[t])):
-                            grads[t][gr_i] = grads[t][gr_i] / gn[t]
-                    sol, min_norm = MinNormSolver.find_min_norm_element([grads[t] for t in tasks])
-                    for i, t in enumerate(tasks):
-                        scale[t] = float(sol[i])
-                    # self.optimizer.zero_grad()
-                    for i, t in enumerate(tasks):
-                        if i > 0:
-                            loss = loss + scale[t] * loss_t[t]
-                        else:
-                            loss = scale[t] * loss_t[t]
+                    # loss_data = {}
+                    # grads = {}
+                    # scale = {}
+                    # tasks = ["1", "2"]
+                    # loss_t = {"1": labeled_loss, "2": unlabeled_loss}
+                    # # loss_t["1"] = labeled_loss
+                    # # loss_t["2"] = unlabeled_loss
+                    # # Compute gradients of each loss function wrt z
+                    # for t in tasks:
+                    #     self.optimizer.zero_grad()
+                    #     loss_data[t] = loss_t[t].data
+                    #     loss_t[t].backward(retain_graph=True)
+                    #     grads[t] = []
+                    #     for param in self.model.parameters():
+                    #         if param.grad is not None:
+                    #             grads[t].append(Variable(param.grad.data.clone(), requires_grad=False))
+                    # gn = gradient_normalizers(grads, loss_data, "loss+")
+                    # for t in tasks:
+                    #     for gr_i in range(len(grads[t])):
+                    #         grads[t][gr_i] = grads[t][gr_i] / gn[t]
+                    # sol, min_norm = MinNormSolver.find_min_norm_element([grads[t] for t in tasks])
+                    # for i, t in enumerate(tasks):
+                    #     scale[t] = float(sol[i])
+                    # # self.optimizer.zero_grad()
+                    # for i, t in enumerate(tasks):
+                    #     if i > 0:
+                    #         loss = loss + scale[t] * loss_t[t]
+                    #     else:
+                    #         loss = scale[t] * loss_t[t]
                     ####
                     # loss = (self.model.weights[0] ** 2) * labeled_loss + (self.model.weights[1] ** 2) * unlabeled_loss
+                    loss = (1 - alpha) * labeled_loss + alpha * unlabeled_loss
+
                 elif self.list_path2 != 'None' and self.list_path1 == 'None':  # 有监督
                     data, targets = data.float().to(self.device), targets.float().to(
                         self.device)
@@ -162,7 +165,7 @@ class PseudoLabel:
                 labeled_loss = unlabeled_loss = torch.Tensor([0])
                 # loss=self.loss_ul(data, outputs * 100 + 298)
                 loss = self.loss_l(outputs + 298, targets)
-                scale = {"1": 0, "2": 0}
+                #scale = {"1": 0, "2": 0}
             # labeled_n += labeled_bs
             loop_loss.append(loss.item())
             # acc = loss.item()
@@ -202,22 +205,22 @@ class PseudoLabel:
 
     def unlabeled_weight(self, loss1, loss2):
         alpha = 0.0
-        # if self.epoch > self.T1:
-        #     alpha = (self.epoch - self.T1) / (self.T2 - self.T1) * self.af
-        #     if self.epoch > self.T2:
-        #         alpha = self.af
-        c1 = 0
-        c2 = 0
-        while loss1 < 1:
-            loss1 = loss1 * 10
-            c1 += 1
-        while loss2 < 1:
-            loss2 = loss2 * 10
-            c2 += 1
-        if c2 > c1:
-            alpha = 10 ** (c2 - c1)
-        else:
-            alpha = 1
+        if self.epoch > self.T1:
+            alpha = ((self.epoch - self.T1) / (self.T2 - self.T1)) * self.af
+            if self.epoch > self.T2:
+                alpha = self.af
+        # c1 = 0
+        # c2 = 0
+        # while loss1 < 1:
+        #     loss1 = loss1 * 10
+        #     c1 += 1
+        # while loss2 < 1:
+        #     loss2 = loss2 * 10
+        #     c2 += 1
+        # if c2 > c1:
+        #     alpha = 10 ** (c2 - c1)
+        # else:
+        #     alpha = 1
         return alpha
 
     def train(self, data_loader, print_freq=20):
@@ -259,9 +262,6 @@ class PseudoLabel:
                 model_out_path.mkdir()
             from datetime import datetime
             # current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-            torch.save(state, model_out_path / "semi_dw1_onepoint200_500l_7500ul_netc.pth")
+            torch.save(state, model_out_path / "uns8_onepoint200_4000ul_netc.pth")
 
-
-
-    def data_augment(self,data):
-
+    # def data_augment(self,data):
